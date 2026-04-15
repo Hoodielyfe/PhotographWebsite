@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
+import { SignedImage } from '@/components/signed-image'
 import { MoreHorizontal, Pencil, Trash2, Star, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -125,7 +125,7 @@ export function PhotosTable({ photos, categories }: PhotosTableProps) {
               <TableRow key={photo.id}>
                 <TableCell>
                   <div className="w-12 h-12 rounded bg-muted overflow-hidden">
-                    <Image
+                    <SignedImage
                       src={photo.thumbnail_url || photo.image_url}
                       alt={photo.title}
                       width={48}

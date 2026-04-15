@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { PhotoForm } from '../photo-form'
 import type { Photo, Category } from '@/lib/types'
 
+function normalizePhoto(photo: any): Photo {
+  return {
+    ...photo,
+    image_url: photo.image_url || photo.url || '',
+  }
+}
+
 async function getPhoto(id: string): Promise<Photo | null> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -10,7 +17,7 @@ async function getPhoto(id: string): Promise<Photo | null> {
     .select('*, category:categories(*)')
     .eq('id', id)
     .single()
-  return data
+  return data ? normalizePhoto(data) : null
 }
 
 async function getCategories(): Promise<Category[]> {

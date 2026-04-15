@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn, isRemoteUrl } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -29,11 +30,16 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [uploadPath, setUploadPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   
   const [title, setTitle] = useState(photo?.title || '')
   const [description, setDescription] = useState(photo?.description || '')
   const [imageUrl, setImageUrl] = useState(photo?.image_url || '')
+  const [imagePath, setImagePath] = useState<string | null>(
+    photo?.image_url && !isRemoteUrl(photo.image_url) ? photo.image_url : null,
+  )
   const [categoryId, setCategoryId] = useState(photo?.category_id || '')
   const [isFeatured, setIsFeatured] = useState(photo?.is_featured || false)
   const [isPublished, setIsPublished] = useState(photo?.is_published !== false)
@@ -41,6 +47,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
 
   const handleUpload = useCallback(async (file: File) => {
     setIsUploading(true)
+    setUploadStatus(`Uploading ${file.name}...`)
     setError(null)
     
     try {
@@ -52,21 +59,29 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
         body: formData,
       })
       
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'Upload failed')
       }
-      
-      const data = await response.json()
+
+      if (!data?.url) {
+        throw new Error(
+          data.error || 'Upload succeeded but no image URL was returned.'
+        )
+      }
+
       setImageUrl(data.url)
-      
-      // Auto-fill title from filename if empty
+      setUploadPath(data.path || null)
+      setUploadStatus('Upload complete!')
+
       if (!title) {
         const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
         setTitle(nameWithoutExt.replace(/[-_]/g, ' '))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
+      setUploadStatus('Upload failed')
     } finally {
       setIsUploading(false)
     }
@@ -95,6 +110,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
     try {
       const url = photo ? `/api/photos/${photo.id}` : '/api/photos'
       const method = photo ? 'PATCH' : 'POST'
+      const payloadImageUrl = uploadPath || imagePath || imageUrl
       
       const response = await fetch(url, {
         method,
@@ -102,19 +118,20 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
         body: JSON.stringify({
           title,
           description: description || null,
-          image_url: imageUrl,
-          category_id: categoryId || null,
+          image_url: payloadImageUrl,
+          category_id:
+            categoryId && categoryId !== 'uncategorized' ? categoryId : null,
           is_featured: isFeatured,
           is_published: isPublished,
           metadata: Object.keys(metadata || {}).length > 0 ? metadata : null,
         }),
       })
-      
+
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to save photo')
       }
-      
+
       router.push('/admin/photos')
       router.refresh()
     } catch (err) {
@@ -123,6 +140,43 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
       setIsSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (!imagePath || isRemoteUrl(imageUrl)) {
+      return
+    }
+
+    let canceled = false
+
+    const path = imagePath
+
+    async function resolvePreview() {
+      try {
+        const response = await fetch(
+          `/api/storage/signed-url?path=${encodeURIComponent(path)}`,
+        )
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Unable to resolve image preview')
+        }
+
+        if (!canceled) {
+          setImageUrl(data.url)
+        }
+      } catch (err) {
+        if (!canceled) {
+          setError(err instanceof Error ? err.message : 'Unable to resolve image preview')
+        }
+      }
+    }
+
+    resolvePreview()
+
+    return () => {
+      canceled = true
+    }
+  }, [imagePath, imageUrl])
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -181,6 +235,23 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
                   </div>
                 )}
               </label>
+              {uploadStatus ? (
+                <div className="mt-3 text-left">
+                  <p
+                    className={cn(
+                      'text-sm font-medium',
+                      isUploading ? 'text-foreground' : 'text-foreground/80',
+                    )}
+                  >
+                    {uploadStatus}
+                  </p>
+                  {uploadPath ? (
+                    <p className="text-xs text-muted-foreground mt-1 break-all">
+                      Storage path: {uploadPath}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )}
         </CardContent>
@@ -216,7 +287,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Uncategorized</SelectItem>
+              <SelectItem value="uncategorized">Uncategorized</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}

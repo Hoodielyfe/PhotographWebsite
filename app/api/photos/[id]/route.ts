@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+function normalizePhoto(photo: any) {
+  if (!photo) return photo
+
+  return {
+    ...photo,
+    image_url: photo.image_url || photo.url || '',
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Photo not found' }, { status: 404 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json(normalizePhoto(data))
   } catch (error) {
     console.error('Photo GET API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -45,13 +54,13 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {}
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
-    if (image_url !== undefined) updateData.image_url = image_url
+    if (image_url !== undefined) updateData.url = image_url
     if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url
     if (category_id !== undefined) updateData.category_id = category_id
     if (is_featured !== undefined) updateData.is_featured = is_featured
     if (is_published !== undefined) updateData.is_published = is_published
     if (display_order !== undefined) updateData.display_order = display_order
-    if (metadata !== undefined) updateData.metadata = metadata
+    if (metadata !== undefined && Object.keys(metadata || {}).length > 0) updateData.metadata = metadata
 
     const { data, error } = await supabase
       .from('photos')
@@ -65,7 +74,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update photo' }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json(normalizePhoto(data))
   } catch (error) {
     console.error('Photo PATCH API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

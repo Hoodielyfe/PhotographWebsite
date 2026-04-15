@@ -41,8 +41,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const userRole = (user?.user_metadata as { role?: string } | undefined)?.role
+  const allowedAdminRoles = ['owner', 'admin']
+
   // Protect admin routes
-  if (request.nextUrl.pathname.startsWith('/admin') && !user) {
+  if (
+    request.nextUrl.pathname.startsWith('/admin') &&
+    (!user || !allowedAdminRoles.includes(userRole || ''))
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)

@@ -26,20 +26,47 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    const loginValue = email.trim()
+
+    if (!loginValue.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginValue,
         password,
       })
       if (error) throw error
+
+      const role = (data?.user?.user_metadata as { role?: string } | undefined)?.role
+      const allowedRoles = ['owner', 'admin']
+
+      if (!allowedRoles.includes(role || '')) {
+        await supabase.auth.signOut()
+        setError(
+          'Your account is not authorized to access admin. Please use an owner or admin account.'
+        )
+        return
+      }
+
       router.push('/admin')
       router.refresh()
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'object' && error && 'message' in error
+          ? String((error as any).message)
+          : String(error)
+
+      setError(message || 'An error occurred')
+      console.error('Login error:', error)
     } finally {
       setIsLoading(false)
     }

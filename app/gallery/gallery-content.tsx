@@ -41,7 +41,12 @@ export function GalleryContent({ categories }: GalleryContentProps) {
       }
 
       const { data } = await query
-      setPhotos(data || [])
+      setPhotos(
+        (data || []).map((photo: any) => ({
+          ...photo,
+          image_url: photo.image_url || photo.url || '',
+        })),
+      )
       setIsLoading(false)
     }
 

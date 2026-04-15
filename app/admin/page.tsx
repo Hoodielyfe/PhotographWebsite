@@ -3,6 +3,7 @@ import { Image, FolderOpen, Mail, Eye, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
+import { SignedImage } from '@/components/signed-image'
 
 async function getStats() {
   const supabase = await createClient()
@@ -22,6 +23,15 @@ async function getStats() {
   }
 }
 
+function normalizePhoto(photo: any) {
+  if (!photo) return photo
+
+  return {
+    ...photo,
+    image_url: photo.image_url || photo.url || '',
+  }
+}
+
 async function getRecentPhotos() {
   const supabase = await createClient()
   const { data } = await supabase
@@ -29,7 +39,7 @@ async function getRecentPhotos() {
     .select('*, category:categories(name)')
     .order('created_at', { ascending: false })
     .limit(5)
-  return data || []
+  return (data || []).map(normalizePhoto)
 }
 
 async function getRecentMessages() {
@@ -73,13 +83,20 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+            <Link href="/admin/categories" className="text-muted-foreground hover:text-foreground transition-colors">
+              <FolderOpen className="h-4 w-4" />
+            </Link>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCategories}</div>
             <p className="text-xs text-muted-foreground">
               Photo collections
             </p>
+            <div className="mt-3">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/admin/categories">Manage Categories</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -125,9 +142,11 @@ export default async function AdminDashboard() {
                 {recentPhotos.map((photo) => (
                   <div key={photo.id} className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                      <img
+                      <SignedImage
                         src={photo.thumbnail_url || photo.image_url}
                         alt={photo.title}
+                        width={48}
+                        height={48}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -209,6 +228,12 @@ export default async function AdminDashboard() {
               <Link href="/admin/photos/new">
                 <Image className="h-4 w-4 mr-2" />
                 Upload Photo
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/admin/categories">
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Manage Categories
               </Link>
             </Button>
             <Button variant="outline" asChild>

@@ -1,9 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 import type { Photo } from '@/lib/types'
 import { Lightbox } from '@/components/lightbox'
+import { SignedImage } from '@/components/signed-image'
 import { cn } from '@/lib/utils'
 
 interface PhotoGridProps {
@@ -78,7 +78,7 @@ function PhotoItem({ photo, onClick, variant }: PhotoItemProps) {
       )}
       aria-label={`View ${photo.title}`}
     >
-      <Image
+      <SignedImage
         src={photo.thumbnail_url || photo.image_url}
         alt={photo.title}
         width={800}
@@ -88,7 +88,7 @@ function PhotoItem({ photo, onClick, variant }: PhotoItemProps) {
           'group-hover:scale-105',
           isLoaded ? 'opacity-100' : 'opacity-0'
         )}
-        onLoad={() => setIsLoaded(true)}
+        onLoadingComplete={() => setIsLoaded(true)}
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
       />
       

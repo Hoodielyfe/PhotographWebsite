@@ -1,10 +1,10 @@
 'use client'
 
-import Image from 'next/image'
 import { useEffect, useCallback, useState } from 'react'
 import { X, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Photo } from '@/lib/types'
+import { SignedImage } from '@/components/signed-image'
 import { cn } from '@/lib/utils'
 
 interface LightboxProps {
@@ -102,7 +102,7 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
       {/* Image */}
       <div className="h-full w-full flex items-center justify-center p-16">
         <div className="relative max-h-full max-w-full">
-          <Image
+          <SignedImage
             src={photo.image_url}
             alt={photo.title}
             width={1920}
@@ -111,7 +111,7 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
               'max-h-[calc(100vh-8rem)] w-auto object-contain transition-opacity duration-300',
               isLoaded ? 'opacity-100' : 'opacity-0'
             )}
-            onLoad={() => setIsLoaded(true)}
+            onLoadingComplete={() => setIsLoaded(true)}
             priority
           />
           {!isLoaded && (

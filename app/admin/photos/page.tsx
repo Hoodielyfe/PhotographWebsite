@@ -5,13 +5,20 @@ import { createClient } from '@/lib/supabase/server'
 import { PhotosTable } from './photos-table'
 import type { Photo, Category } from '@/lib/types'
 
+function normalizePhoto(photo: any): Photo {
+  return {
+    ...photo,
+    image_url: photo.image_url || photo.url || '',
+  }
+}
+
 async function getPhotos(): Promise<Photo[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('photos')
     .select('*, category:categories(*)')
     .order('display_order')
-  return data || []
+  return (data || []).map(normalizePhoto)
 }
 
 async function getCategories(): Promise<Category[]> {
