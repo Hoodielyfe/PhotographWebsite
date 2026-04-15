@@ -4,64 +4,10 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { createClient } from '@/lib/supabase/server'
-import type { Photo, Category } from '@/lib/types'
+import { photos, categories } from '@/lib/data'
 
-async function getFeaturedPhotos(): Promise<Photo[]> {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('photos')
-      .select('*, category:categories(*)')
-      .eq('is_featured', true)
-      .eq('is_published', true)
-      .order('display_order')
-      .limit(6)
-    if (error) {
-      console.log('[v0] Error fetching featured photos:', error.message)
-      return []
-    }
-    return data || []
-  } catch (err) {
-    console.log('[v0] Exception fetching featured photos:', err)
-    return []
-  }
-}
-
-async function getCategories(): Promise<Category[]> {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('display_order')
-      .limit(4)
-    if (error) {
-      console.log('[v0] Error fetching categories:', error.message)
-      return []
-    }
-    return data || []
-  } catch (err) {
-    console.log('[v0] Exception fetching categories:', err)
-    return []
-  }
-}
-
-export default async function HomePage() {
-  let featuredPhotos: Photo[] = []
-  let categories: Category[] = []
-  
-  try {
-    const results = await Promise.all([
-      getFeaturedPhotos(),
-      getCategories()
-    ])
-    featuredPhotos = results[0]
-    categories = results[1]
-  } catch (err) {
-    console.log('[v0] Error loading page data:', err)
-  }
-
+export default function HomePage() {
+  const featuredPhotos = photos.filter(p => p.is_featured)
   const heroPhoto = featuredPhotos[0]
 
   return (
@@ -82,15 +28,15 @@ export default async function HomePage() {
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900" />
           )}
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-black/50" />
           <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tight mb-6 animate-fade-in">
+            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tight mb-6">
               Capturing Moments,<br />Creating Memories
             </h1>
-            <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
               Professional photography that tells your story through stunning visual narratives
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-white text-black hover:bg-white/90">
                 <Link href="/gallery">
                   View Gallery
@@ -105,110 +51,85 @@ export default async function HomePage() {
         </section>
 
         {/* Featured Work */}
-        {featuredPhotos.length > 0 && (
-          <section className="py-20 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="font-serif text-3xl sm:text-4xl font-semibold mb-4">Featured Work</h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  A curated selection of our finest photographs
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {featuredPhotos.slice(0, 6).map((photo, index) => (
-                  <Link
-                    key={photo.id}
-                    href={`/gallery?photo=${photo.id}`}
-                    className="group relative aspect-[4/3] overflow-hidden bg-muted"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <Image
-                      src={photo.thumbnail_url || photo.image_url}
-                      alt={photo.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">
-                      <div className="p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <h3 className="text-white font-medium">{photo.title}</h3>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-              <div className="text-center mt-10">
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/gallery">
-                    View All Photos
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
+        <section className="py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="font-serif text-3xl sm:text-4xl font-semibold mb-4">Featured Work</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">A curated selection of our finest photographs</p>
             </div>
-          </section>
-        )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {featuredPhotos.slice(0, 6).map((photo) => (
+                <Link
+                  key={photo.id}
+                  href={`/gallery`}
+                  className="group relative aspect-[4/3] overflow-hidden bg-muted"
+                >
+                  <Image
+                    src={photo.thumbnail_url || photo.image_url}
+                    alt={photo.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">
+                    <div className="p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <h3 className="text-white font-medium">{photo.title}</h3>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="text-center mt-10">
+              <Button asChild variant="outline" size="lg">
+                <Link href="/gallery">View All Photos <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
+            </div>
+          </div>
+        </section>
 
         {/* Categories */}
-        {categories.length > 0 && (
-          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
-            <div className="max-w-7xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="font-serif text-3xl sm:text-4xl font-semibold mb-4">Explore Categories</h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Browse through our diverse collection of photography
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={`/gallery?category=${category.slug}`}
-                    className="group relative aspect-[3/4] overflow-hidden bg-muted rounded-lg"
-                  >
-                    {category.cover_image ? (
-                      <Image
-                        src={category.cover_image}
-                        alt={category.name}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-neutral-700 to-neutral-800" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <h3 className="text-white font-serif text-xl font-semibold mb-1">
-                        {category.name}
-                      </h3>
-                      {category.description && (
-                        <p className="text-white/70 text-sm line-clamp-2">
-                          {category.description}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="font-serif text-3xl sm:text-4xl font-semibold mb-4">Explore Categories</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">Browse through our diverse collection</p>
             </div>
-          </section>
-        )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/gallery?category=${category.slug}`}
+                  className="group relative aspect-[3/4] overflow-hidden bg-muted rounded-lg"
+                >
+                  {category.cover_image && (
+                    <Image
+                      src={category.cover_image}
+                      alt={category.name}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h3 className="text-white font-serif text-xl font-semibold mb-1">{category.name}</h3>
+                    {category.description && (
+                      <p className="text-white/70 text-sm">{category.description}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        {/* CTA Section */}
+        {/* CTA */}
         <section className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-serif text-3xl sm:text-4xl font-semibold mb-4">
-              Ready to Create Something Beautiful?
-            </h2>
-            <p className="text-muted-foreground mb-8 text-lg">
-              {"Let's work together to capture your special moments"}
-            </p>
+            <h2 className="font-serif text-3xl sm:text-4xl font-semibold mb-4">Ready to Create Something Beautiful?</h2>
+            <p className="text-muted-foreground mb-8 text-lg">{"Let's work together to capture your special moments"}</p>
             <Button asChild size="lg">
-              <Link href="/contact">
-                Start a Conversation
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+              <Link href="/contact">Start a Conversation <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
         </section>

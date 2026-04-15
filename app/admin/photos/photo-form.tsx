@@ -298,8 +298,15 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
               <FieldLabel htmlFor="iso">ISO</FieldLabel>
               <Input
                 id="iso"
-                value={metadata?.iso || ''}
-                onChange={(e) => setMetadata({ ...metadata, iso: e.target.value })}
+                type="number"
+                value={metadata?.iso?.toString() || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setMetadata({
+                    ...metadata,
+                    iso: value ? Number(value) : undefined,
+                  })
+                }}
                 placeholder="e.g., 400"
               />
             </Field>

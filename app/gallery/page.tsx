@@ -1,61 +1,62 @@
-import { Suspense } from 'react'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { GalleryContent } from './gallery-content'
-import { createClient } from '@/lib/supabase/server'
-import type { Category } from '@/lib/types'
+import { PhotoGrid } from '@/components/photo-grid'
+import { photos, categories } from '@/lib/data'
 
-export const metadata = {
-  title: 'Gallery',
-  description: 'Browse our complete photography collection across all categories.',
-}
+export const metadata = { title: 'Gallery' }
 
-async function getCategories(): Promise<Category[]> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('categories')
-    .select('*')
-    .order('display_order')
-  return data || []
-}
-
-export default async function GalleryPage() {
-  const categories = await getCategories()
+export default function GalleryPage({
+  searchParams,
+}: {
+  searchParams: { category?: string }
+}) {
+  const filtered = searchParams.category
+    ? photos.filter(p => p.category?.slug === searchParams.category && p.is_published)
+    : photos.filter(p => p.is_published)
 
   return (
     <>
       <Navigation />
-      <main className="min-h-screen pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="font-serif text-4xl sm:text-5xl font-semibold mb-4">Gallery</h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Explore our complete collection of photography work
+              Every frame tells a story
             </p>
           </div>
-          <Suspense fallback={<GalleryLoading />}>
-            <GalleryContent categories={categories} />
-          </Suspense>
+
+          {/* Category Filter */}
+          <div className="flex flex-wrap justify-center gap-3 mb-12">
+            <a
+              href="/gallery"
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                !searchParams.category
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              All
+            </a>
+            {categories.map((cat) => (
+              <a
+                key={cat.id}
+                href={`/gallery?category=${cat.slug}`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  searchParams.category === cat.slug
+                    ? 'bg-foreground text-background'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {cat.name}
+              </a>
+            ))}
+          </div>
+
+          <PhotoGrid photos={filtered} variant="masonry" />
         </div>
       </main>
       <Footer />
     </>
-  )
-}
-
-function GalleryLoading() {
-  return (
-    <div className="space-y-8">
-      <div className="flex justify-center gap-2">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-10 w-24 bg-muted animate-pulse rounded-md" />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[...Array(9)].map((_, i) => (
-          <div key={i} className="aspect-[4/3] bg-muted animate-pulse rounded-lg" />
-        ))}
-      </div>
-    </div>
   )
 }
