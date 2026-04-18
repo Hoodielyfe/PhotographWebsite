@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Field, FieldGroup, FieldLabel, FieldError } from '@/components/ui/field'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { CheckCircle } from 'lucide-react'
 
@@ -23,6 +22,7 @@ export function ContactForm() {
     const data = {
       name: formData.get('name') as string,
       email: formData.get('email') as string,
+      phone: formData.get('phone') as string,
       subject: formData.get('subject') as string,
       message: formData.get('message') as string,
     }
@@ -88,6 +88,16 @@ export function ContactForm() {
             />
           </Field>
         </div>
+        <Field>
+          <FieldLabel htmlFor="phone">Phone</FieldLabel>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            placeholder="(555) 123-4567"
+            required
+          />
+        </Field>
         <Field>
           <FieldLabel htmlFor="subject">Subject</FieldLabel>
           <Input

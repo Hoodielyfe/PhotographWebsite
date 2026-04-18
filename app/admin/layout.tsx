@@ -1,21 +1,12 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { AdminSidebar } from './admin-sidebar'
+import { requireAdminPageUser } from '@/lib/server-auth'
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const role = (user?.user_metadata as { role?: string } | undefined)?.role
-  const allowedRoles = ['owner', 'admin']
-
-  if (!user || !allowedRoles.includes(role || '')) {
-    redirect('/auth/login')
-  }
+  const user = await requireAdminPageUser()
 
   return (
     <div className="flex min-h-screen">

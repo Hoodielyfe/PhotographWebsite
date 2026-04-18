@@ -1,18 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { Mail, Instagram, MapPin } from 'lucide-react'
+import { ContactForm } from './contact-form'
 
 export default function ContactPage() {
-  const [submitted, setSubmitted] = useState(false)
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSubmitted(true)
-  }
-
   return (
     <>
       <Navigation />
@@ -56,57 +49,7 @@ export default function ContactPage() {
             </div>
 
             {/* Contact Form */}
-            {submitted ? (
-              <div className="flex flex-col items-center justify-center text-center py-16">
-                <p className="font-serif text-2xl mb-2">Thank you!</p>
-                <p className="text-muted-foreground">I'll be in touch soon.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Name</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="Your name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    placeholder="your@email.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Project Type</label>
-                  <select className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20">
-                    <option>Portrait Session</option>
-                    <option>Event Coverage</option>
-                    <option>Landscape / Commercial</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Message</label>
-                  <textarea
-                    required
-                    rows={5}
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 resize-none"
-                    placeholder="Tell me about your project..."
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-3 px-6 bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  Send Message
-                </button>
-              </form>
-            )}
+            <ContactForm />
           </div>
         </div>
       </main>

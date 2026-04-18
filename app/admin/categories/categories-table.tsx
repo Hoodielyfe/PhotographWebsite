@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import { MoreHorizontal, Pencil, Trash2, FolderOpen } from 'lucide-react'
+import { SignedImage } from '@/components/signed-image'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -97,7 +97,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                 <TableCell>
                   <div className="w-12 h-12 rounded bg-muted overflow-hidden flex items-center justify-center">
                     {category.cover_image ? (
-                      <Image
+                      <SignedImage
                         src={category.cover_image}
                         alt={category.name}
                         width={48}

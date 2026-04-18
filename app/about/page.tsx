@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
+import { PublicImageFrame } from '@/components/public-image-frame'
 
 export const metadata = { title: 'About' }
 
@@ -12,12 +13,16 @@ export default function AboutPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative aspect-[3/4] overflow-hidden rounded-lg">
-              <Image
-                src="https://images.unsplash.com/photo-1552168324-d612d77725e3?w=800&q=80"
-                alt="Photographer"
-                fill
-                className="object-cover"
-              />
+              <PublicImageFrame className="absolute inset-0 rounded-lg">
+                <Image
+                  src="https://images.unsplash.com/photo-1552168324-d612d77725e3?w=800&q=80"
+                  alt="Photographer"
+                  fill
+                  loading="eager"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                />
+              </PublicImageFrame>
             </div>
             <div>
               <h1 className="font-serif text-4xl sm:text-5xl font-semibold mb-6">About Studio</h1>

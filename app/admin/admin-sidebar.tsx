@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Camera, Image, FolderOpen, Mail, Settings, LogOut, Menu, X, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { getUserRole } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import type { User } from '@supabase/supabase-js'
@@ -25,7 +26,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const role = (user.user_metadata as { role?: string } | undefined)?.role
+  const role = getUserRole(user)
 
   const handleSignOut = async () => {
     const supabase = createClient()

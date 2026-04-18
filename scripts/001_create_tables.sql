@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS photos (
   taken_at TIMESTAMPTZ,
   location TEXT,
   camera_info TEXT,
+  metadata JSONB,
+  raw_metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -37,9 +39,12 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT NOT NULL,
+  phone TEXT,
   subject TEXT,
   message TEXT NOT NULL,
   is_read BOOLEAN DEFAULT FALSE,
+  is_contacted BOOLEAN DEFAULT FALSE,
+  contacted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

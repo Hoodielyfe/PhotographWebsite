@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { userHasAdminRole } from '@/lib/auth'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -41,13 +42,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const userRole = (user?.user_metadata as { role?: string } | undefined)?.role
-  const allowedAdminRoles = ['owner', 'admin']
-
   // Protect admin routes
   if (
     request.nextUrl.pathname.startsWith('/admin') &&
-    (!user || !allowedAdminRoles.includes(userRole || ''))
+    (!user || !userHasAdminRole(user))
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'

@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState } from 'react'
 import { X, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Photo } from '@/lib/types'
+import { PublicImageFrame } from '@/components/public-image-frame'
 import { SignedImage } from '@/components/signed-image'
 import { cn } from '@/lib/utils'
 
@@ -101,19 +102,21 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
 
       {/* Image */}
       <div className="h-full w-full flex items-center justify-center p-16">
-        <div className="relative max-h-full max-w-full">
-          <SignedImage
-            src={photo.image_url}
-            alt={photo.title}
-            width={1920}
-            height={1080}
-            className={cn(
-              'max-h-[calc(100vh-8rem)] w-auto object-contain transition-opacity duration-300',
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            )}
-            onLoadingComplete={() => setIsLoaded(true)}
-            priority
-          />
+        <div className="relative max-h-full max-w-full" onContextMenu={(event) => event.preventDefault()}>
+          <PublicImageFrame>
+            <SignedImage
+              src={photo.image_url}
+              alt={photo.title}
+              width={1920}
+              height={1080}
+              loading="eager"
+              className={cn(
+                'max-h-[calc(100vh-8rem)] w-auto object-contain transition-opacity duration-300',
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              )}
+              onLoad={() => setIsLoaded(true)}
+            />
+          </PublicImageFrame>
           {!isLoaded && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="h-8 w-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />

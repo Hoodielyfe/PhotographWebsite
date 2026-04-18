@@ -3,23 +3,16 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
+import { PublicImageFrame } from '@/components/public-image-frame'
 import { SignedImage } from '@/components/signed-image'
+import {
+  normalizeCategory,
+  normalizePhoto,
+  resolveCategoryMediaUrls,
+  resolvePhotoMediaUrls,
+} from '@/lib/media'
 import { createClient } from '@/lib/supabase/server'
 import type { Photo, Category } from '@/lib/types'
-
-function normalizePhoto(photo: any): Photo {
-  return {
-    ...photo,
-    image_url: photo.image_url || photo.url || '',
-  }
-}
-
-function normalizeCategory(category: any): Category {
-  return {
-    ...category,
-    cover_image: category.cover_image || category.cover_image_url || '',
-  }
-}
 
 async function getHomepageData() {
   const supabase = await createClient()
@@ -39,10 +32,12 @@ async function getHomepageData() {
       .limit(4),
   ])
 
-  return {
-    featuredPhotos: (photosResult.data || []).map(normalizePhoto),
-    categories: (categoriesResult.data || []).map(normalizeCategory),
-  }
+  const [featuredPhotos, categories] = await Promise.all([
+    resolvePhotoMediaUrls((photosResult.data || []).map(normalizePhoto)),
+    resolveCategoryMediaUrls((categoriesResult.data || []).map(normalizeCategory)),
+  ])
+
+  return { featuredPhotos, categories }
 }
 
 export default async function HomePage() {
@@ -56,14 +51,16 @@ export default async function HomePage() {
         {/* Hero Section */}
         <section className="relative h-[calc(100vh-4rem)] flex items-center justify-center">
           {heroPhoto ? (
-            <SignedImage
-              src={heroPhoto.image_url}
-              alt={heroPhoto.title}
-              fill
-              className="object-cover"
-              priority
-              sizes="100vw"
-            />
+            <PublicImageFrame className="absolute inset-0">
+              <SignedImage
+                src={heroPhoto.image_url}
+                alt={heroPhoto.title}
+                fill
+                className="object-cover"
+                priority
+                sizes="100vw"
+              />
+            </PublicImageFrame>
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900" />
           )}
@@ -103,13 +100,15 @@ export default async function HomePage() {
                   href={`/gallery`}
                   className="group relative aspect-[4/3] overflow-hidden bg-muted"
                 >
-                  <SignedImage
-                    src={photo.thumbnail_url || photo.image_url}
-                    alt={photo.title}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
+                  <PublicImageFrame className="absolute inset-0">
+                    <SignedImage
+                      src={photo.thumbnail_url || photo.image_url}
+                      alt={photo.title}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  </PublicImageFrame>
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">
                     <div className="p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <h3 className="text-white font-medium">{photo.title}</h3>
@@ -141,13 +140,15 @@ export default async function HomePage() {
                   className="group relative aspect-[3/4] overflow-hidden bg-muted rounded-lg"
                 >
                   {category.cover_image && (
-                    <SignedImage
-                      src={category.cover_image}
-                      alt={category.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    />
+                    <PublicImageFrame className="absolute inset-0 rounded-lg">
+                      <SignedImage
+                        src={category.cover_image}
+                        alt={category.name}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
+                    </PublicImageFrame>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">

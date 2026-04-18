@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Camera, Instagram, Mail } from 'lucide-react'
+import { Camera, Instagram, Lock, Mail } from 'lucide-react'
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
@@ -8,7 +8,11 @@ export function Footer() {
     <footer className="border-t border-border bg-card">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 font-serif text-xl font-semibold">
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 font-serif text-xl font-semibold transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="Studio home"
+          >
             <Camera className="h-6 w-6" />
             <span>Studio</span>
           </Link>
@@ -45,6 +49,13 @@ export function Footer() {
             >
               <Mail className="h-5 w-5" />
             </a>
+            <Link
+              href="/auth/login"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Admin login"
+            >
+              <Lock className="h-5 w-5" />
+            </Link>
           </div>
 
           <p className="text-sm text-muted-foreground">

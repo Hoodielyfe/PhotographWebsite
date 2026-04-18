@@ -1,67 +1,50 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { startTransition, useDeferredValue, useEffect, useState } from 'react'
 import { PhotoGrid } from '@/components/photo-grid'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
 import type { Photo, Category } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { LayoutGrid, Columns } from 'lucide-react'
 
 interface GalleryContentProps {
   categories: Category[]
+  photos: Photo[]
 }
 
-export function GalleryContent({ categories }: GalleryContentProps) {
+export function GalleryContent({ categories, photos }: GalleryContentProps) {
   const searchParams = useSearchParams()
   const categorySlug = searchParams.get('category')
-  
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categorySlug)
   const [viewMode, setViewMode] = useState<'masonry' | 'grid'>('masonry')
+  const deferredSelectedCategory = useDeferredValue(selectedCategory)
 
   useEffect(() => {
-    async function fetchPhotos() {
-      setIsLoading(true)
-      const supabase = createClient()
-      
-      let query = supabase
-        .from('photos')
-        .select('*, category:categories(*)')
-        .eq('is_published', true)
-        .order('display_order')
+    setSelectedCategory(categorySlug)
+  }, [categorySlug])
 
-      if (selectedCategory) {
-        const category = categories.find(c => c.slug === selectedCategory)
-        if (category) {
-          query = query.eq('category_id', category.id)
-        }
-      }
+  const hasMatchingCategory = deferredSelectedCategory
+    ? categories.some((category) => category.slug === deferredSelectedCategory)
+    : false
 
-      const { data } = await query
-      setPhotos(
-        (data || []).map((photo: any) => ({
-          ...photo,
-          image_url: photo.image_url || photo.url || '',
-        })),
-      )
-      setIsLoading(false)
-    }
-
-    fetchPhotos()
-  }, [selectedCategory, categories])
+  const visiblePhotos = hasMatchingCategory
+    ? photos.filter((photo) => photo.category?.slug === deferredSelectedCategory)
+    : photos
 
   const handleCategoryChange = (slug: string | null) => {
-    setSelectedCategory(slug)
-    const url = new URL(window.location.href)
-    if (slug) {
-      url.searchParams.set('category', slug)
-    } else {
-      url.searchParams.delete('category')
-    }
-    window.history.pushState({}, '', url)
+    startTransition(() => {
+      setSelectedCategory(slug)
+      const url = new URL(window.location.href)
+
+      if (slug) {
+        url.searchParams.set('category', slug)
+      } else {
+        url.searchParams.delete('category')
+      }
+
+      window.history.pushState({}, '', url)
+    })
   }
 
   return (
@@ -111,14 +94,14 @@ export function GalleryContent({ categories }: GalleryContentProps) {
       </div>
 
       {/* Photo Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {selectedCategory !== deferredSelectedCategory ? (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4 lg:gap-5">
           {[...Array(9)].map((_, i) => (
             <div key={i} className="aspect-[4/3] bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
       ) : (
-        <PhotoGrid photos={photos} variant={viewMode} />
+        <PhotoGrid photos={visiblePhotos} variant={viewMode} />
       )}
     </div>
   )

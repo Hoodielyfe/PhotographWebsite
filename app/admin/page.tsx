@@ -1,9 +1,11 @@
 import Link from 'next/link'
-import { Image, FolderOpen, Mail, Eye, TrendingUp } from 'lucide-react'
+import { Image, FolderOpen, Mail, Eye, TrendingUp, HardDrive } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { SignedImage } from '@/components/signed-image'
+import { normalizePhoto, resolvePhotoMediaUrls } from '@/lib/media'
+import { getStorageUsageStats } from '@/lib/storage-usage'
 
 async function getStats() {
   const supabase = await createClient()
@@ -23,15 +25,6 @@ async function getStats() {
   }
 }
 
-function normalizePhoto(photo: any) {
-  if (!photo) return photo
-
-  return {
-    ...photo,
-    image_url: photo.image_url || photo.url || '',
-  }
-}
-
 async function getRecentPhotos() {
   const supabase = await createClient()
   const { data } = await supabase
@@ -39,7 +32,8 @@ async function getRecentPhotos() {
     .select('*, category:categories(name)')
     .order('created_at', { ascending: false })
     .limit(5)
-  return (data || []).map(normalizePhoto)
+
+  return resolvePhotoMediaUrls((data || []).map(normalizePhoto))
 }
 
 async function getRecentMessages() {
@@ -53,8 +47,9 @@ async function getRecentMessages() {
 }
 
 export default async function AdminDashboard() {
-  const [stats, recentPhotos, recentMessages] = await Promise.all([
+  const [stats, storageStats, recentPhotos, recentMessages] = await Promise.all([
     getStats(),
+    getStorageUsageStats(),
     getRecentPhotos(),
     getRecentMessages(),
   ])
@@ -67,7 +62,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Link href="/admin/photos" className="block">
           <Card className="h-full transition-colors hover:bg-muted/40 cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -124,6 +119,31 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
         </Link>
+        <Card className="h-full">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {storageStats.limitLabel ? `${storageStats.usedLabel} / ${storageStats.limitLabel}` : storageStats.usedLabel}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {storageStats.usedOutOfLabel
+                ? `${storageStats.usedOutOfLabel}. ${storageStats.remainingLabel} remaining.`
+                : `${storageStats.totalFiles} files in storage`}
+            </p>
+            {storageStats.usagePercent !== null ? (
+              <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width]"
+                  style={{ width: `${storageStats.usagePercent}%` }}
+                  aria-label={storageStats.usedOutOfLabel || 'Storage usage'}
+                />
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

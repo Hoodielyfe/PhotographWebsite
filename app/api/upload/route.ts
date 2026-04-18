@@ -1,14 +1,62 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { SIGNED_URL_TTL_SECONDS } from '@/lib/media'
+import { extractPhotoMetadata } from '@/lib/photo-metadata'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireAdminUser } from '@/lib/server-auth'
+
+type DetectedImageType = {
+  extension: 'jpg' | 'png' | 'webp' | 'gif'
+  mime: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+}
+
+function detectImageType(bytes: Uint8Array): DetectedImageType | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { extension: 'jpg', mime: 'image/jpeg' }
+  }
+
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return { extension: 'png', mime: 'image/png' }
+  }
+
+  if (
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38 &&
+    (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+    bytes[5] === 0x61
+  ) {
+    return { extension: 'gif', mime: 'image/gif' }
+  }
+
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return { extension: 'webp', mime: 'image/webp' }
+  }
+
+  return null
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await requireAdminUser()
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -25,15 +73,6 @@ export async function POST(request: NextRequest) {
 
     const file = fileEntry
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.' },
-        { status: 400 }
-      )
-    }
-
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024
     if (file.size > maxSize) {
@@ -43,30 +82,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Confirm the storage bucket exists before uploading
-    const { data: bucketInfo, error: bucketInfoError } = await serviceSupabase.storage.getBucket('photos')
-    if (bucketInfoError || !bucketInfo) {
-      console.error('Supabase storage bucket check failed:', bucketInfoError)
+    const fileBuffer = Buffer.from(await file.arrayBuffer())
+    const fileHeaderBytes = new Uint8Array(fileBuffer.subarray(0, 16))
+    const detectedFileType = detectImageType(fileHeaderBytes)
+
+    if (!detectedFileType) {
       return NextResponse.json(
-        {
-          error:
-            bucketInfoError?.message ||
-            "Supabase storage bucket 'photos' was not found. Create a bucket named 'photos' in your Supabase project.",
-        },
-        { status: 500 },
+        { error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.' },
+        { status: 400 },
       )
     }
 
-    // Generate unique filename
-    const timestamp = Date.now()
-    const extension = file.name.split('.').pop() ?? 'jpg'
-    const filename = `photos/${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`
+    if (file.type && file.type !== detectedFileType.mime) {
+      return NextResponse.json(
+        { error: 'File type does not match the uploaded image contents.' },
+        { status: 400 },
+      )
+    }
 
-    const { data: uploadData, error: uploadError } = await serviceSupabase.storage
+    const metadataPromise = extractPhotoMetadata(fileBuffer, {
+      fileName: file.name,
+      mimeType: detectedFileType.mime,
+      fileSize: file.size,
+    })
+
+    // Generate unique filename
+    const filename = `photos/${crypto.randomUUID()}.${detectedFileType.extension}`
+
+    const uploadPromise = serviceSupabase.storage
       .from('photos')
-      .upload(filename, file, {
-        contentType: file.type,
+      .upload(filename, fileBuffer, {
+        cacheControl: '31536000',
+        contentType: detectedFileType.mime,
+        upsert: false,
       })
+
+    const [{ data: uploadData, error: uploadError }, extractedMetadata] = await Promise.all([
+      uploadPromise,
+      metadataPromise,
+    ])
 
     if (uploadError || !uploadData) {
       console.error('Supabase storage upload failed:', uploadError)
@@ -82,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     const { data: signedUrlData, error: signedUrlError } = await serviceSupabase.storage
       .from('photos')
-      .createSignedUrl(uploadData.path, 3600)
+      .createSignedUrl(uploadData.path, SIGNED_URL_TTL_SECONDS)
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('Supabase signed URL generation failed:', signedUrlError)
@@ -99,6 +153,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       url: signedUrlData.signedUrl,
       path: uploadData.path,
+      extractedMetadata,
     })
   } catch (error) {
     console.error('Upload error:', error)

@@ -1,13 +1,22 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { MessagesTable } from './messages-table'
 import type { ContactMessage } from '@/lib/types'
+import { requireAdminPageUser } from '@/lib/server-auth'
 
 async function getMessages(): Promise<ContactMessage[]> {
-  const supabase = await createClient()
-  const { data } = await supabase
+  await requireAdminPageUser()
+
+  const adminSupabase = createServiceClient()
+  const { data, error } = await adminSupabase
     .from('contact_messages')
     .select('*')
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching contact messages:', error)
+    throw new Error('Failed to load contact messages')
+  }
+
   return data || []
 }
 

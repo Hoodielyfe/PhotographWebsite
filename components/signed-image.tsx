@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { cn, isRemoteUrl } from '@/lib/utils'
 
 const signedUrlCache = new Map<string, string>()
+const signedUrlPromiseCache = new Map<string, Promise<string | undefined>>()
 
 type SignedImageProps = Omit<ImageProps, 'src'> & {
   src: string
@@ -27,20 +28,40 @@ export function SignedImage({ src, alt, className, ...props }: SignedImageProps)
     }
 
     let canceled = false
+    setResolvedSrc(undefined)
 
     async function loadSignedUrl() {
       try {
-        const response = await fetch(`/api/storage/signed-url?path=${encodeURIComponent(src)}`)
-        const data = await response.json()
+        const existingPromise = signedUrlPromiseCache.get(src)
+        const signedUrlPromise =
+          existingPromise ||
+          fetch(`/api/storage/signed-url?path=${encodeURIComponent(src)}`, {
+            cache: 'force-cache',
+          })
+            .then(async (response) => {
+              const data = await response.json()
 
-        if (!response.ok) {
-          console.error('Failed to fetch signed URL:', data.error)
-          return
-        }
+              if (!response.ok) {
+                console.error('Failed to fetch signed URL:', data.error)
+                return undefined
+              }
 
-        if (!canceled && data.url) {
-          signedUrlCache.set(src, data.url)
-          setResolvedSrc(data.url)
+              if (data.url) {
+                signedUrlCache.set(src, data.url)
+                return data.url as string
+              }
+
+              return undefined
+            })
+            .finally(() => {
+              signedUrlPromiseCache.delete(src)
+            })
+
+        signedUrlPromiseCache.set(src, signedUrlPromise)
+        const url = await signedUrlPromise
+
+        if (!canceled && url) {
+          setResolvedSrc(url)
         }
       } catch (error) {
         console.error('Signed image load error:', error)

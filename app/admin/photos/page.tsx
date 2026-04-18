@@ -4,13 +4,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { PhotosTable } from './photos-table'
 import type { Photo, Category } from '@/lib/types'
-
-function normalizePhoto(photo: any): Photo {
-  return {
-    ...photo,
-    image_url: photo.image_url || photo.url || '',
-  }
-}
+import { normalizePhoto, resolvePhotoMediaUrls } from '@/lib/media'
 
 async function getPhotos(): Promise<Photo[]> {
   const supabase = await createClient()
@@ -18,7 +12,8 @@ async function getPhotos(): Promise<Photo[]> {
     .from('photos')
     .select('*, category:categories(*)')
     .order('display_order')
-  return (data || []).map(normalizePhoto)
+
+  return resolvePhotoMediaUrls((data || []).map(normalizePhoto))
 }
 
 async function getCategories(): Promise<Category[]> {

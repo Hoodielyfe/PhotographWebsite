@@ -23,7 +23,11 @@ export function Navigation() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-serif text-xl font-semibold tracking-tight">
+          <Link
+            href="/"
+            className="flex h-full min-w-[9.5rem] items-center gap-2 rounded-md px-4 font-serif text-xl font-semibold tracking-tight transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="Studio home"
+          >
             <Camera className="h-6 w-6" />
             <span>Studio</span>
           </Link>

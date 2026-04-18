@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Photo } from '@/lib/types'
 import { Lightbox } from '@/components/lightbox'
 import { SignedImage } from '@/components/signed-image'
+import { PublicImageFrame } from '@/components/public-image-frame'
 import { cn } from '@/lib/utils'
 
 interface PhotoGridProps {
@@ -13,6 +14,7 @@ interface PhotoGridProps {
 
 export function PhotoGrid({ photos, variant = 'masonry' }: PhotoGridProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const eagerImageCount = 4
 
   if (photos.length === 0) {
     return (
@@ -25,24 +27,26 @@ export function PhotoGrid({ photos, variant = 'masonry' }: PhotoGridProps) {
   return (
     <>
       {variant === 'masonry' ? (
-        <div className="masonry-grid">
+        <div className="masonry-grid w-full">
           {photos.map((photo, index) => (
             <PhotoItem
               key={photo.id}
               photo={photo}
               onClick={() => setSelectedIndex(index)}
               variant="masonry"
+              loading={index < eagerImageCount ? 'eager' : 'lazy'}
             />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4 lg:gap-5">
           {photos.map((photo, index) => (
             <PhotoItem
               key={photo.id}
               photo={photo}
               onClick={() => setSelectedIndex(index)}
               variant="grid"
+              loading={index < eagerImageCount ? 'eager' : 'lazy'}
             />
           ))}
         </div>
@@ -64,33 +68,39 @@ interface PhotoItemProps {
   photo: Photo
   onClick: () => void
   variant: 'masonry' | 'grid'
+  loading: 'eager' | 'lazy'
 }
 
-function PhotoItem({ photo, onClick, variant }: PhotoItemProps) {
+function PhotoItem({ photo, onClick, variant, loading }: PhotoItemProps) {
   const [isLoaded, setIsLoaded] = useState(false)
 
   return (
     <button
       onClick={onClick}
+      onContextMenu={(event) => event.preventDefault()}
+      onDragStart={(event) => event.preventDefault()}
       className={cn(
         'group relative overflow-hidden bg-muted cursor-pointer w-full text-left',
         variant === 'masonry' ? 'masonry-item' : 'aspect-[4/3]'
       )}
       aria-label={`View ${photo.title}`}
     >
-      <SignedImage
-        src={photo.thumbnail_url || photo.image_url}
-        alt={photo.title}
-        width={800}
-        height={600}
-        className={cn(
-          'w-full h-auto object-cover transition-all duration-500',
-          'group-hover:scale-105',
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        )}
-        onLoadingComplete={() => setIsLoaded(true)}
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-      />
+      <PublicImageFrame className="h-full w-full">
+        <SignedImage
+          src={photo.thumbnail_url || photo.image_url}
+          alt={photo.title}
+          width={800}
+          height={600}
+          loading={loading}
+          className={cn(
+            'w-full h-auto object-cover transition-all duration-500',
+            'group-hover:scale-105',
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          )}
+          onLoad={() => setIsLoaded(true)}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        />
+      </PublicImageFrame>
       
       {/* Overlay on hover */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">

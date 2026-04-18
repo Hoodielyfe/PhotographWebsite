@@ -1,5 +1,6 @@
 'use client'
 
+import { getUserRole, isAdminRole } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,16 +39,22 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: loginValue,
         password,
       })
       if (error) throw error
 
-      const role = (data?.user?.user_metadata as { role?: string } | undefined)?.role
-      const allowedRoles = ['owner', 'admin']
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-      if (!allowedRoles.includes(role || '')) {
+      if (userError) throw userError
+
+      const role = getUserRole(user)
+
+      if (!isAdminRole(role)) {
         await supabase.auth.signOut()
         setError(
           'Your account is not authorized to access admin. Please use an owner or admin account.'

@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-
-function normalizePhoto(photo: any) {
-  if (!photo) return photo
-
-  return {
-    ...photo,
-    image_url: photo.image_url || photo.url || '',
-  }
-}
+import { normalizePhoto } from '@/lib/media'
+import { ensurePhotoDeliveryForPhoto } from '@/lib/photo-delivery'
+import { requireAdminUser } from '@/lib/server-auth'
 
 export async function GET() {
   try {
@@ -33,15 +27,31 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await requireAdminUser()
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const supabase = await createClient()
+
     const body = await request.json()
-    const { title, description, image_url, thumbnail_url, category_id, is_featured, is_published, metadata } = body
+    const {
+      title,
+      description,
+      image_url,
+      thumbnail_url,
+      category_id,
+      is_featured,
+      is_published,
+      metadata,
+      raw_metadata,
+      width,
+      height,
+      taken_at,
+      location,
+      camera_info,
+    } = body
 
     if (!title || !image_url) {
       return NextResponse.json(
@@ -69,10 +79,14 @@ export async function POST(request: NextRequest) {
       is_featured: is_featured || false,
       is_published: is_published !== false,
       display_order,
-    }
-
-    if (metadata && Object.keys(metadata).length > 0) {
-      payload.metadata = metadata
+      width: width || null,
+      height: height || null,
+      taken_at: taken_at || null,
+      location: location || null,
+      camera_info: camera_info || null,
+      metadata: metadata && Object.keys(metadata).length > 0 ? metadata : null,
+      raw_metadata:
+        raw_metadata && Object.keys(raw_metadata).length > 0 ? raw_metadata : null,
     }
 
     const { data, error } = await supabase
@@ -90,7 +104,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(normalizePhoto(data))
+    let responsePhoto = normalizePhoto(data)
+
+    try {
+      responsePhoto = normalizePhoto(await ensurePhotoDeliveryForPhoto(responsePhoto))
+    } catch (deliveryError) {
+      console.error('Error syncing public delivery after photo creation:', deliveryError)
+    }
+
+    return NextResponse.json(responsePhoto)
   } catch (error) {
     console.error('Photos POST API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

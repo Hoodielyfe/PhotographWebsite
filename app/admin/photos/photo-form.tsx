@@ -19,7 +19,72 @@ import {
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
-import type { Photo, Category } from '@/lib/types'
+import type { Photo, Category, PhotoMetadata } from '@/lib/types'
+
+type UploadExtraction = {
+  metadata?: PhotoMetadata | null
+  raw_metadata?: Record<string, unknown> | null
+  width?: number | null
+  height?: number | null
+  taken_at?: string | null
+}
+
+const VISIBLE_METADATA_KEYS = new Set([
+  'camera',
+  'lens',
+  'aperture',
+  'shutter_speed',
+  'iso',
+  'location',
+])
+
+function hasValue(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return false
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().length > 0
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0
+  }
+
+  return true
+}
+
+function mergeMetadata(current: PhotoMetadata | null | undefined, extracted: PhotoMetadata | null | undefined): PhotoMetadata {
+  const nextMetadata: PhotoMetadata = { ...(current || {}) }
+
+  for (const [key, value] of Object.entries(extracted || {})) {
+    if (!hasValue(value)) {
+      continue
+    }
+
+    const metadataKey = key as keyof PhotoMetadata
+    const currentValue = nextMetadata[metadataKey]
+
+    if (VISIBLE_METADATA_KEYS.has(key)) {
+      if (!hasValue(currentValue)) {
+        nextMetadata[metadataKey] = value as never
+      }
+      continue
+    }
+
+    nextMetadata[metadataKey] = value as never
+  }
+
+  return nextMetadata
+}
+
+function buildCameraInfo(metadata: PhotoMetadata | null | undefined): string | null {
+  const parts = [metadata?.camera, metadata?.lens].filter(
+    (value): value is string => Boolean(value && value.trim()),
+  )
+
+  return parts.length > 0 ? parts.join(' | ') : null
+}
 
 interface PhotoFormProps {
   photo?: Photo
@@ -44,6 +109,12 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
   const [isFeatured, setIsFeatured] = useState(photo?.is_featured || false)
   const [isPublished, setIsPublished] = useState(photo?.is_published !== false)
   const [metadata, setMetadata] = useState<Photo['metadata']>(photo?.metadata || {})
+  const [rawMetadata, setRawMetadata] = useState<Record<string, unknown> | null>(
+    photo?.raw_metadata || null,
+  )
+  const [width, setWidth] = useState<number | null>(photo?.width ?? null)
+  const [height, setHeight] = useState<number | null>(photo?.height ?? null)
+  const [takenAt, setTakenAt] = useState<string | null>(photo?.taken_at ?? null)
 
   const handleUpload = useCallback(async (file: File) => {
     setIsUploading(true)
@@ -73,7 +144,37 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
 
       setImageUrl(data.url)
       setUploadPath(data.path || null)
-      setUploadStatus('Upload complete!')
+
+      const extractedMetadata = data?.extractedMetadata as UploadExtraction | undefined
+      if (extractedMetadata?.metadata) {
+        setMetadata((currentMetadata) =>
+          mergeMetadata(currentMetadata || {}, extractedMetadata.metadata || {}),
+        )
+      }
+
+      if (extractedMetadata?.raw_metadata) {
+        setRawMetadata(extractedMetadata.raw_metadata)
+      }
+
+      if (typeof extractedMetadata?.width === 'number') {
+        setWidth(extractedMetadata.width)
+      }
+
+      if (typeof extractedMetadata?.height === 'number') {
+        setHeight(extractedMetadata.height)
+      }
+
+      if (extractedMetadata?.taken_at) {
+        setTakenAt(extractedMetadata.taken_at)
+      }
+
+      const metadataExtracted = Boolean(
+        extractedMetadata?.metadata && Object.keys(extractedMetadata.metadata).length > 0,
+      )
+
+      setUploadStatus(
+        metadataExtracted ? 'Upload complete. Metadata extracted automatically.' : 'Upload complete!',
+      )
 
       if (!title) {
         const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
@@ -124,6 +225,12 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
           is_featured: isFeatured,
           is_published: isPublished,
           metadata: Object.keys(metadata || {}).length > 0 ? metadata : null,
+          raw_metadata: rawMetadata,
+          width,
+          height,
+          taken_at: takenAt,
+          location: metadata?.location || null,
+          camera_info: buildCameraInfo(metadata),
         }),
       })
 

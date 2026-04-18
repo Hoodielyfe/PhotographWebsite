@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, MoreHorizontal, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { Mail, MoreHorizontal, Trash2, Eye, EyeOff, ExternalLink, Phone, FolderCheck, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -50,6 +50,11 @@ export function MessagesTable({ messages }: MessagesTableProps) {
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [activeFolder, setActiveFolder] = useState<'inbox' | 'contacted'>('inbox')
+
+  const inboxMessages = messages.filter((message) => !message.is_contacted)
+  const contactedMessages = messages.filter((message) => message.is_contacted)
+  const visibleMessages = activeFolder === 'inbox' ? inboxMessages : contactedMessages
 
   const handleView = async (message: ContactMessage) => {
     setSelectedMessage(message)
@@ -78,6 +83,19 @@ export function MessagesTable({ messages }: MessagesTableProps) {
       router.refresh()
     } catch (error) {
       console.error('Error updating message:', error)
+    }
+  }
+
+  const toggleContacted = async (message: ContactMessage) => {
+    try {
+      await fetch(`/api/messages/${message.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_contacted: !message.is_contacted }),
+      })
+      router.refresh()
+    } catch (error) {
+      console.error('Error updating contacted status:', error)
     }
   }
 
@@ -111,8 +129,44 @@ export function MessagesTable({ messages }: MessagesTableProps) {
     )
   }
 
+  const emptyFolderTitle = activeFolder === 'inbox' ? 'Inbox is clear' : 'No contacted messages yet'
+  const emptyFolderDescription =
+    activeFolder === 'inbox'
+      ? 'New contact form submissions will appear here until you move them to Contacted.'
+      : 'Messages you mark as contacted will move here for follow-up tracking.'
+
   return (
     <>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          type="button"
+          variant={activeFolder === 'inbox' ? 'default' : 'outline'}
+          onClick={() => setActiveFolder('inbox')}
+          className="gap-2"
+        >
+          <Inbox className="h-4 w-4" />
+          Inbox
+          <Badge variant="secondary" className="ml-1">{inboxMessages.length}</Badge>
+        </Button>
+        <Button
+          type="button"
+          variant={activeFolder === 'contacted' ? 'default' : 'outline'}
+          onClick={() => setActiveFolder('contacted')}
+          className="gap-2"
+        >
+          <FolderCheck className="h-4 w-4" />
+          Contacted Folder
+          <Badge variant="secondary" className="ml-1">{contactedMessages.length}</Badge>
+        </Button>
+      </div>
+
+      {visibleMessages.length === 0 ? (
+        <Empty
+          icon={activeFolder === 'inbox' ? <Inbox className="w-12 h-12 text-muted-foreground" /> : <FolderCheck className="w-12 h-12 text-muted-foreground" />}
+          title={emptyFolderTitle}
+          description={emptyFolderDescription}
+        />
+      ) : (
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -120,15 +174,19 @@ export function MessagesTable({ messages }: MessagesTableProps) {
               <TableHead className="w-8"></TableHead>
               <TableHead>From</TableHead>
               <TableHead>Subject</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {messages.map((message) => (
+            {visibleMessages.map((message) => (
               <TableRow
                 key={message.id}
-                className={cn('cursor-pointer', !message.is_read && 'bg-primary/5')}
+                className={cn(
+                  'cursor-pointer',
+                  !message.is_read && !message.is_contacted && 'bg-primary/5',
+                )}
                 onClick={() => handleView(message)}
               >
                 <TableCell>
@@ -141,6 +199,9 @@ export function MessagesTable({ messages }: MessagesTableProps) {
                     {message.name}
                   </div>
                   <div className="text-sm text-muted-foreground">{message.email}</div>
+                  {message.phone ? (
+                    <div className="text-sm text-muted-foreground">{message.phone}</div>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   <div className={cn(!message.is_read && 'font-medium')}>
@@ -151,6 +212,11 @@ export function MessagesTable({ messages }: MessagesTableProps) {
                   <div className="text-sm text-muted-foreground truncate max-w-xs">
                     {message.message.slice(0, 60)}...
                   </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={message.is_contacted ? 'secondary' : 'outline'}>
+                    {message.is_contacted ? 'Contacted' : 'Inbox'}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {new Date(message.created_at).toLocaleDateString()}
@@ -181,6 +247,19 @@ export function MessagesTable({ messages }: MessagesTableProps) {
                           </>
                         )}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleContacted(message)}>
+                        {message.is_contacted ? (
+                          <>
+                            <Inbox className="h-4 w-4 mr-2" />
+                            Move to Inbox
+                          </>
+                        ) : (
+                          <>
+                            <FolderCheck className="h-4 w-4 mr-2" />
+                            Move to Contacted
+                          </>
+                        )}
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <a href={`mailto:${message.email}`}>
                           <ExternalLink className="h-4 w-4 mr-2" />
@@ -203,6 +282,7 @@ export function MessagesTable({ messages }: MessagesTableProps) {
           </TableBody>
         </Table>
       </div>
+      )}
 
       {/* View Message Dialog */}
       <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
@@ -214,6 +294,24 @@ export function MessagesTable({ messages }: MessagesTableProps) {
               {selectedMessage && new Date(selectedMessage.created_at).toLocaleString()}
             </DialogDescription>
           </DialogHeader>
+          <div className="grid gap-3 rounded-lg border p-4 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-muted-foreground">Email</p>
+              <p className="font-medium">{selectedMessage?.email}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Phone</p>
+              <p className="font-medium">{selectedMessage?.phone || 'Not provided'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Folder</p>
+              <p className="font-medium">{selectedMessage?.is_contacted ? 'Contacted' : 'Inbox'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Read Status</p>
+              <p className="font-medium">{selectedMessage?.is_read ? 'Read' : 'Unread'}</p>
+            </div>
+          </div>
           <div className="mt-4">
             <p className="whitespace-pre-wrap text-sm">{selectedMessage?.message}</p>
           </div>
@@ -223,6 +321,31 @@ export function MessagesTable({ messages }: MessagesTableProps) {
                 <Mail className="h-4 w-4 mr-2" />
                 Reply
               </a>
+            </Button>
+            {selectedMessage?.phone ? (
+              <Button variant="outline" asChild>
+                <a href={`tel:${selectedMessage.phone}`}>
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call
+                </a>
+              </Button>
+            ) : null}
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!selectedMessage) return
+                void toggleContacted(selectedMessage)
+                setSelectedMessage((current) =>
+                  current
+                    ? {
+                        ...current,
+                        is_contacted: !current.is_contacted,
+                      }
+                    : current,
+                )
+              }}
+            >
+              {selectedMessage?.is_contacted ? 'Move to Inbox' : 'Move to Contacted'}
             </Button>
             <Button variant="outline" onClick={() => setSelectedMessage(null)}>
               Close
