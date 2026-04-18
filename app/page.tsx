@@ -1,13 +1,52 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { photos, categories } from '@/lib/data'
+import { SignedImage } from '@/components/signed-image'
+import { createClient } from '@/lib/supabase/server'
+import type { Photo, Category } from '@/lib/types'
 
-export default function HomePage() {
-  const featuredPhotos = photos.filter(p => p.is_featured)
+function normalizePhoto(photo: any): Photo {
+  return {
+    ...photo,
+    image_url: photo.image_url || photo.url || '',
+  }
+}
+
+function normalizeCategory(category: any): Category {
+  return {
+    ...category,
+    cover_image: category.cover_image || category.cover_image_url || '',
+  }
+}
+
+async function getHomepageData() {
+  const supabase = await createClient()
+
+  const [photosResult, categoriesResult] = await Promise.all([
+    supabase
+      .from('photos')
+      .select('*, category:categories(*)')
+      .eq('is_published', true)
+      .eq('is_featured', true)
+      .order('display_order')
+      .limit(6),
+    supabase
+      .from('categories')
+      .select('*')
+      .order('display_order')
+      .limit(4),
+  ])
+
+  return {
+    featuredPhotos: (photosResult.data || []).map(normalizePhoto),
+    categories: (categoriesResult.data || []).map(normalizeCategory),
+  }
+}
+
+export default async function HomePage() {
+  const { featuredPhotos, categories } = await getHomepageData()
   const heroPhoto = featuredPhotos[0]
 
   return (
@@ -17,7 +56,7 @@ export default function HomePage() {
         {/* Hero Section */}
         <section className="relative h-[calc(100vh-4rem)] flex items-center justify-center">
           {heroPhoto ? (
-            <Image
+            <SignedImage
               src={heroPhoto.image_url}
               alt={heroPhoto.title}
               fill
@@ -64,7 +103,7 @@ export default function HomePage() {
                   href={`/gallery`}
                   className="group relative aspect-[4/3] overflow-hidden bg-muted"
                 >
-                  <Image
+                  <SignedImage
                     src={photo.thumbnail_url || photo.image_url}
                     alt={photo.title}
                     fill
@@ -102,7 +141,7 @@ export default function HomePage() {
                   className="group relative aspect-[3/4] overflow-hidden bg-muted rounded-lg"
                 >
                   {category.cover_image && (
-                    <Image
+                    <SignedImage
                       src={category.cover_image}
                       alt={category.name}
                       fill

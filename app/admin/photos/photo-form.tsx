@@ -298,7 +298,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field className="flex items-center justify-between rounded-lg border p-4">
+          <Field className="flex w-full items-center justify-between gap-4 rounded-lg border px-4 py-3">
             <div>
               <FieldLabel htmlFor="featured" className="text-base">Featured</FieldLabel>
               <FieldDescription>Show on homepage</FieldDescription>
@@ -310,7 +310,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
             />
           </Field>
 
-          <Field className="flex items-center justify-between rounded-lg border p-4">
+          <Field className="flex w-full items-center justify-between gap-4 rounded-lg border px-4 py-3">
             <div>
               <FieldLabel htmlFor="published" className="text-base">Published</FieldLabel>
               <FieldDescription>Visible in gallery</FieldDescription>

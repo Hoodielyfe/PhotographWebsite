@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { CategoryForm } from '../category-form'
 import type { Category } from '@/lib/types'
 
+function normalizeCategory(category: any): Category {
+  return {
+    ...category,
+    cover_image: category.cover_image || category.cover_image_url || '',
+  }
+}
+
 async function getCategory(id: string): Promise<Category | null> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -10,7 +17,7 @@ async function getCategory(id: string): Promise<Category | null> {
     .select('*')
     .eq('id', id)
     .single()
-  return data
+  return data ? normalizeCategory(data) : null
 }
 
 export default async function EditCategoryPage({

@@ -68,61 +68,62 @@ export default async function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Photos</CardTitle>
-            <Image className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPhotos}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.featuredPhotos} featured
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <Link href="/admin/categories" className="text-muted-foreground hover:text-foreground transition-colors">
-              <FolderOpen className="h-4 w-4" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCategories}</div>
-            <p className="text-xs text-muted-foreground">
-              Photo collections
-            </p>
-            <div className="mt-3">
-              <Button variant="secondary" size="sm" asChild>
-                <Link href="/admin/categories">Manage Categories</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.unreadMessages}</div>
-            <p className="text-xs text-muted-foreground">
-              Pending inquiries
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Featured</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.featuredPhotos}</div>
-            <p className="text-xs text-muted-foreground">
-              Highlighted on homepage
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/photos" className="block">
+          <Card className="h-full transition-colors hover:bg-muted/40 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Photos</CardTitle>
+              <Image className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalPhotos}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.featuredPhotos} featured
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/categories" className="block">
+          <Card className="h-full transition-colors hover:bg-muted/40 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <FolderOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalCategories}</div>
+              <p className="text-xs text-muted-foreground">
+                Photo collections
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/messages" className="block">
+          <Card className="h-full transition-colors hover:bg-muted/40 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.unreadMessages}</div>
+              <p className="text-xs text-muted-foreground">
+                Pending inquiries
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/photos" className="block">
+          <Card className="h-full transition-colors hover:bg-muted/40 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Featured</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.featuredPhotos}</div>
+              <p className="text-xs text-muted-foreground">
+                Highlighted on homepage
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

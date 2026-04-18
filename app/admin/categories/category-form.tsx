@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
+import { SignedImage } from '@/components/signed-image'
+import { isRemoteUrl } from '@/lib/utils'
 import type { Category } from '@/lib/types'
 
 interface CategoryFormProps {
@@ -25,6 +26,9 @@ export function CategoryForm({ category }: CategoryFormProps) {
   const [name, setName] = useState(category?.name || '')
   const [description, setDescription] = useState(category?.description || '')
   const [coverImage, setCoverImage] = useState(category?.cover_image || '')
+  const [coverImagePath, setCoverImagePath] = useState<string | null>(
+    category?.cover_image && !isRemoteUrl(category.cover_image) ? category.cover_image : null,
+  )
 
   const handleUpload = useCallback(async (file: File) => {
     setIsUploading(true)
@@ -46,6 +50,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
       
       const data = await response.json()
       setCoverImage(data.url)
+      setCoverImagePath(data.path || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -68,6 +73,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
     try {
       const url = category ? `/api/categories/${category.id}` : '/api/categories'
       const method = category ? 'PATCH' : 'POST'
+      const payloadCoverImage = coverImagePath || coverImage || null
       
       const response = await fetch(url, {
         method,
@@ -75,7 +81,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
         body: JSON.stringify({
           name,
           description: description || null,
-          cover_image: coverImage || null,
+          cover_image: payloadCoverImage,
         }),
       })
       
@@ -93,6 +99,42 @@ export function CategoryForm({ category }: CategoryFormProps) {
     }
   }
 
+  useEffect(() => {
+    if (!coverImagePath || isRemoteUrl(coverImage)) {
+      return
+    }
+
+    let canceled = false
+    const path = coverImagePath
+
+    async function resolvePreview() {
+      try {
+        const response = await fetch(
+          `/api/storage/signed-url?path=${encodeURIComponent(path)}`,
+        )
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Unable to resolve cover preview')
+        }
+
+        if (!canceled && data.url) {
+          setCoverImage(data.url)
+        }
+      } catch (err) {
+        if (!canceled) {
+          setError(err instanceof Error ? err.message : 'Unable to resolve cover preview')
+        }
+      }
+    }
+
+    resolvePreview()
+
+    return () => {
+      canceled = true
+    }
+  }, [coverImagePath, coverImage])
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Cover Image */}
@@ -102,7 +144,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
           {coverImage ? (
             <div className="relative">
               <div className="relative aspect-[3/2] bg-muted rounded-lg overflow-hidden">
-                <Image
+                <SignedImage
                   src={coverImage}
                   alt="Preview"
                   fill
@@ -114,7 +156,10 @@ export function CategoryForm({ category }: CategoryFormProps) {
                 variant="destructive"
                 size="icon"
                 className="absolute top-2 right-2"
-                onClick={() => setCoverImage('')}
+                onClick={() => {
+                  setCoverImage('')
+                  setCoverImagePath(null)
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>

@@ -1,18 +1,23 @@
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { PhotoGrid } from '@/components/photo-grid'
-import { photos, categories } from '@/lib/data'
+import { GalleryContent } from './gallery-content'
+import { createClient } from '@/lib/supabase/server'
+import type { Category } from '@/lib/types'
 
 export const metadata = { title: 'Gallery' }
 
-export default function GalleryPage({
-  searchParams,
-}: {
-  searchParams: { category?: string }
-}) {
-  const filtered = searchParams.category
-    ? photos.filter(p => p.category?.slug === searchParams.category && p.is_published)
-    : photos.filter(p => p.is_published)
+async function getCategories(): Promise<Category[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('categories')
+    .select('*')
+    .order('display_order')
+
+  return data || []
+}
+
+export default async function GalleryPage() {
+  const categories = await getCategories()
 
   return (
     <>
@@ -25,35 +30,7 @@ export default function GalleryPage({
               Every frame tells a story
             </p>
           </div>
-
-          {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
-            <a
-              href="/gallery"
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                !searchParams.category
-                  ? 'bg-foreground text-background'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              All
-            </a>
-            {categories.map((cat) => (
-              <a
-                key={cat.id}
-                href={`/gallery?category=${cat.slug}`}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  searchParams.category === cat.slug
-                    ? 'bg-foreground text-background'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {cat.name}
-              </a>
-            ))}
-          </div>
-
-          <PhotoGrid photos={filtered} variant="masonry" />
+          <GalleryContent categories={categories} />
         </div>
       </main>
       <Footer />

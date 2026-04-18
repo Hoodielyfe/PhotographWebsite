@@ -5,13 +5,20 @@ import { createClient } from '@/lib/supabase/server'
 import { CategoriesTable } from './categories-table'
 import type { Category } from '@/lib/types'
 
+function normalizeCategory(category: any): Category {
+  return {
+    ...category,
+    cover_image: category.cover_image || category.cover_image_url || '',
+  }
+}
+
 async function getCategories(): Promise<Category[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('categories')
     .select('*')
     .order('display_order')
-  return data || []
+  return (data || []).map(normalizeCategory)
 }
 
 export default async function CategoriesPage() {
