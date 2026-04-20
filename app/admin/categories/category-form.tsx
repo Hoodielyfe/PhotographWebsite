@@ -148,6 +148,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
                   src={coverImage}
                   alt="Preview"
                   fill
+                  sizes="(max-width: 1024px) 100vw, 42rem"
                   className="object-cover"
                 />
               </div>

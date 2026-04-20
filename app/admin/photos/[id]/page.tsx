@@ -2,13 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PhotoForm } from '../photo-form'
 import type { Photo, Category } from '@/lib/types'
-
-function normalizePhoto(photo: any): Photo {
-  return {
-    ...photo,
-    image_url: photo.image_url || photo.url || '',
-  }
-}
+import { normalizePhoto, resolvePhotoMediaUrls } from '@/lib/media'
 
 async function getPhoto(id: string): Promise<Photo | null> {
   const supabase = await createClient()
@@ -17,7 +11,13 @@ async function getPhoto(id: string): Promise<Photo | null> {
     .select('*, category:categories(*)')
     .eq('id', id)
     .single()
-  return data ? normalizePhoto(data) : null
+
+  if (!data) {
+    return null
+  }
+
+  const [resolvedPhoto] = await resolvePhotoMediaUrls([normalizePhoto(data)])
+  return resolvedPhoto || null
 }
 
 async function getCategories(): Promise<Category[]> {
@@ -35,14 +35,24 @@ export default async function EditPhotoPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [photo, categories] = await Promise.all([
-    getPhoto(id),
+  const supabase = await createClient()
+  const [rawPhotoResult, categories] = await Promise.all([
+    supabase
+      .from('photos')
+      .select('*, category:categories(*)')
+      .eq('id', id)
+      .single(),
     getCategories()
   ])
+
+  const rawPhoto = rawPhotoResult.data
+  const photo = rawPhoto ? await getPhoto(id) : null
 
   if (!photo) {
     notFound()
   }
+
+  const initialImagePath = rawPhoto?.url || rawPhoto?.image_url || null
 
   return (
     <div className="space-y-6 pt-16 lg:pt-0 max-w-2xl">
@@ -51,7 +61,7 @@ export default async function EditPhotoPage({
         <p className="text-muted-foreground mt-1">Update photo details</p>
       </div>
 
-      <PhotoForm photo={photo} categories={categories} />
+      <PhotoForm photo={photo} categories={categories} initialImagePath={initialImagePath} />
     </div>
   )
 }

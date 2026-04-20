@@ -89,9 +89,10 @@ function buildCameraInfo(metadata: PhotoMetadata | null | undefined): string | n
 interface PhotoFormProps {
   photo?: Photo
   categories: Category[]
+  initialImagePath?: string | null
 }
 
-export function PhotoForm({ photo, categories }: PhotoFormProps) {
+export function PhotoForm({ photo, categories, initialImagePath = null }: PhotoFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -102,9 +103,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
   const [title, setTitle] = useState(photo?.title || '')
   const [description, setDescription] = useState(photo?.description || '')
   const [imageUrl, setImageUrl] = useState(photo?.image_url || '')
-  const [imagePath, setImagePath] = useState<string | null>(
-    photo?.image_url && !isRemoteUrl(photo.image_url) ? photo.image_url : null,
-  )
+  const [imagePath, setImagePath] = useState<string | null>(initialImagePath)
   const [categoryId, setCategoryId] = useState(photo?.category_id || '')
   const [isFeatured, setIsFeatured] = useState(photo?.is_featured || false)
   const [isPublished, setIsPublished] = useState(photo?.is_published !== false)
@@ -297,6 +296,7 @@ export function PhotoForm({ photo, categories }: PhotoFormProps) {
                   src={imageUrl}
                   alt="Preview"
                   fill
+                  sizes="(max-width: 1024px) 100vw, 42rem"
                   className="object-contain"
                 />
               </div>
